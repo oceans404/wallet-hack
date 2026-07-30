@@ -518,6 +518,20 @@
   font-size: 0.95rem;
 }
 
+/* hex by default, decimal while hovered */
+.hex-amount {
+  cursor: default;
+}
+.hex-amount .dec {
+  display: none;
+}
+.hex-amount:hover .hex {
+  display: none;
+}
+.hex-amount:hover .dec {
+  display: inline;
+}
+
 /* ---------- history ---------- */
 
 .history-list {

@@ -4,7 +4,12 @@ import { fundWithFriendbot } from "../lib/stellar";
 import type { NetworkId } from "../lib/network";
 import { getNetworkConfig } from "../lib/network";
 import type { StoredAccount } from "../lib/vault";
-import { copyToClipboard, errorMessage, formatAmount } from "../lib/format";
+import {
+  copyToClipboard,
+  errorMessage,
+  formatAmount,
+  formatAmountHex,
+} from "../lib/format";
 
 interface Props {
   account: StoredAccount;
@@ -13,6 +18,16 @@ interface Props {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
+}
+
+/** Hex stroop count by default; hover to see the decimal amount. */
+function HexAmount({ amount }: { amount: string }) {
+  return (
+    <span className="hex-amount">
+      <span className="hex">{formatAmountHex(amount)}</span>
+      <span className="dec">{formatAmount(amount)}</span>
+    </span>
+  );
 }
 
 export function Balances({
@@ -146,11 +161,11 @@ export function Balances({
                 </div>
                 <div className="balance-amounts">
                   <span className="balance-value">
-                    {formatAmount(balance.balance)}
+                    <HexAmount amount={balance.balance} />
                   </span>
                   {balance.key === "native" && (
                     <span className="muted small">
-                      {formatAmount(summary.spendableXlm)} spendable
+                      <HexAmount amount={summary.spendableXlm} /> spendable
                     </span>
                   )}
                 </div>

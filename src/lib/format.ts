@@ -16,6 +16,18 @@ export function formatAmount(amount: string, maxDecimals = 7): string {
   return formatted;
 }
 
+/**
+ * Renders an amount as its stroop count (amount × 10^7) in hex: "10000" ->
+ * "0x174876E800". Falls back to the raw string for anything non-numeric.
+ */
+export function formatAmountHex(amount: string): string {
+  const match = amount.match(/^(\d+)(?:\.(\d*))?$/);
+  if (!match) return amount;
+  const [, whole, frac = ""] = match;
+  const stroops = BigInt(whole + frac.padEnd(7, "0").slice(0, 7));
+  return `0x${stroops.toString(16).toUpperCase()}`;
+}
+
 export function formatDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
