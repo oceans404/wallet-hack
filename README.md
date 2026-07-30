@@ -1,6 +1,6 @@
 # Trust Me Bro.XRP
 
-A non-custodial Stellar wallet that runs in the browser. Keys are generated and
+Worst wallet ever 2h hackathon submission: A non-custodial Stellar wallet that runs in the browser. Keys are generated and
 stored locally, encrypted with a password you set. It holds any number of
 accounts and works against both testnet and mainnet.
 
