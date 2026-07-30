@@ -1,7 +1,7 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { NotFoundError } from "@stellar/stellar-sdk";
 import { getHorizon, getNetworkConfig, getRpc, type NetworkId } from "./network";
-import { identityMemoText, type Identity } from "./identity";
+import { composeMemo, nameOnlyMemo } from "./memo";
 
 /** Seconds a built transaction stays valid before it expires unsubmitted. */
 const TX_TIMEOUT = 180;
@@ -77,28 +77,16 @@ async function accountExists(
   }
 }
 
-/**
- * Attaches the holder's identity to a transaction. The memo slot carries the
- * name and phone number from the vault, so anything the user typed into the
- * memo field is dropped here without being surfaced.
- */
-function addIdentityMemo(
-  builder: StellarSdk.TransactionBuilder,
-  identity: Identity
-): void {
-  const text = identityMemoText(identity);
-  if (text) builder.addMemo(StellarSdk.Memo.text(text));
-}
-
 export interface PaymentRequest {
   network: NetworkId;
   source: string;
   destination: string;
   amount: string;
   asset: StellarSdk.Asset;
-  /** Read from the form and discarded. The memo carries `identity` instead. */
-  memo?: string;
-  identity: Identity;
+  /** Required. Combined with `firstName` into the on-chain memo. */
+  memo: string;
+  /** The sending account's holder, appended to the memo. */
+  firstName: string;
 }
 
 /**
@@ -108,13 +96,17 @@ export interface PaymentRequest {
 export async function buildPaymentTx(
   request: PaymentRequest
 ): Promise<StellarSdk.Transaction> {
-  const { network, source, destination, amount, asset, identity } = request;
+  const { network, source, destination, amount, asset, memo, firstName } =
+    request;
 
   if (!StellarSdk.StrKey.isValidEd25519PublicKey(destination)) {
     throw new Error("Destination is not a valid Stellar address.");
   }
   if (!(Number(amount) > 0)) {
     throw new Error("Amount must be greater than zero.");
+  }
+  if (!memo.trim()) {
+    throw new Error("A memo is required.");
   }
 
   const config = getNetworkConfig(network);
@@ -141,7 +133,7 @@ export async function buildPaymentTx(
       : StellarSdk.Operation.payment({ destination, asset, amount })
   );
 
-  addIdentityMemo(builder, identity);
+  builder.addMemo(StellarSdk.Memo.text(composeMemo(memo, firstName)));
 
   return builder.setTimeout(TX_TIMEOUT).build();
 }
@@ -152,13 +144,13 @@ export interface TrustlineRequest {
   asset: StellarSdk.Asset;
   /** Omit for the maximum limit; "0" removes the trustline. */
   limit?: string;
-  identity: Identity;
+  firstName: string;
 }
 
 export async function buildTrustlineTx(
   request: TrustlineRequest
 ): Promise<StellarSdk.Transaction> {
-  const { network, source, asset, limit, identity } = request;
+  const { network, source, asset, limit, firstName } = request;
   const config = getNetworkConfig(network);
   const account = await getHorizon(network).loadAccount(source);
 
@@ -167,7 +159,9 @@ export async function buildTrustlineTx(
     networkPassphrase: config.networkPassphrase,
   }).addOperation(StellarSdk.Operation.changeTrust({ asset, limit }));
 
-  addIdentityMemo(builder, identity);
+  // No user memo field on this form, so the name goes in alone.
+  const text = nameOnlyMemo(firstName);
+  if (text) builder.addMemo(StellarSdk.Memo.text(text));
 
   return builder.setTimeout(TX_TIMEOUT).build();
 }

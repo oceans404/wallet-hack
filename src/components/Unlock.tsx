@@ -10,9 +10,6 @@ export function Unlock() {
   const { hasVault, createWallet, unlock, reset } = useWallet();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -23,14 +20,6 @@ export function Unlock() {
     setError(null);
 
     if (creating) {
-      if (!firstName.trim() || !lastName.trim()) {
-        setError("Enter your first and last name.");
-        return;
-      }
-      if (!phone.trim()) {
-        setError("Enter your phone number.");
-        return;
-      }
       if (password.length < 8) {
         setError("Use at least 8 characters.");
         return;
@@ -43,15 +32,8 @@ export function Unlock() {
 
     setBusy(true);
     try {
-      if (creating) {
-        await createWallet(password, {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          phone: phone.trim(),
-        });
-      } else {
-        await unlock(password);
-      }
+      if (creating) await createWallet(password);
+      else await unlock(password);
       setPassword("");
       setConfirm("");
     } catch (err) {
@@ -78,56 +60,15 @@ export function Unlock() {
 
         <p className="gate-copy">
           {creating
-            ? "Tell us who you are, then set a password. It encrypts your details and keys in this browser and is never sent anywhere, so it cannot be recovered."
+            ? "Set a password. It encrypts your keys in this browser and is never sent anywhere, so it cannot be recovered."
             : "Enter your password to unlock this wallet."}
         </p>
-
-        {creating && (
-          <>
-            <div className="row gap">
-              <label className="field">
-                <span>First name</span>
-                <input
-                  autoFocus
-                  autoComplete="given-name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Ada"
-                />
-              </label>
-              <label className="field">
-                <span>Last name</span>
-                <input
-                  autoComplete="family-name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Lovelace"
-                />
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Phone number</span>
-              <input
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 555 123 4567"
-              />
-              <small className="muted">
-                Encrypted with the same key as your secret keys and stored only
-                in this browser.
-              </small>
-            </label>
-          </>
-        )}
 
         <label className="field">
           <span>Password</span>
           <input
             type="text"
-            autoFocus={!creating}
+            autoFocus
             autoComplete={creating ? "new-password" : "current-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

@@ -7,7 +7,6 @@ import {
   openVaultKey,
   type EncryptedBlob,
 } from "./crypto";
-import { EMPTY_IDENTITY, hasIdentity, type Identity } from "./identity";
 
 const VAULT_STORAGE_KEY = "wallet-hack:vault";
 
@@ -15,14 +14,17 @@ export interface StoredAccount {
   id: string;
   name: string;
   publicKey: string;
+  /**
+   * The holder's first name, required on every account and appended to the
+   * memo of anything this account sends.
+   */
+  firstName: string;
   /** Absent for watch-only accounts, which can be viewed but not signed with. */
   secret?: string;
 }
 
 interface VaultData {
   accounts: StoredAccount[];
-  /** Collected at onboarding, encrypted in the same blob as the secret keys. */
-  identity: Identity;
 }
 
 /**
@@ -34,7 +36,6 @@ export interface VaultSession {
   salt: Uint8Array;
   iterations: number;
   accounts: StoredAccount[];
-  identity: Identity;
 }
 
 export function vaultExists(): boolean {
@@ -54,26 +55,16 @@ function readBlob(): EncryptedBlob | null {
 async function persist(session: VaultSession): Promise<void> {
   const blob = await encryptJson(session.key, session.salt, session.iterations, {
     accounts: session.accounts,
-    identity: session.identity,
   } satisfies VaultData);
   localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(blob));
 }
 
-export async function createVault(
-  password: string,
-  identity: Identity
-): Promise<VaultSession> {
+export async function createVault(password: string): Promise<VaultSession> {
   if (vaultExists()) {
     throw new Error("A vault already exists in this browser.");
   }
   const { key, salt, iterations } = await createVaultKey(password);
-  const session: VaultSession = {
-    key,
-    salt,
-    iterations,
-    accounts: [],
-    identity,
-  };
+  const session: VaultSession = { key, salt, iterations, accounts: [] };
   await persist(session);
   return session;
 }
@@ -95,9 +86,12 @@ export async function unlockVault(password: string): Promise<VaultSession> {
     key,
     salt: fromBase64(blob.salt),
     iterations: blob.iterations,
-    accounts: data.accounts ?? [],
-    // Vaults created before onboarding collected personal details have none.
-    identity: data.identity ?? EMPTY_IDENTITY,
+    // Accounts stored before first names were required default to empty, which
+    // just means their memos carry no name.
+    accounts: (data.accounts ?? []).map((account) => ({
+      ...account,
+      firstName: account.firstName ?? "",
+    })),
   };
 }
 
@@ -110,34 +104,17 @@ function nextName(accounts: StoredAccount[]): string {
   return `Account ${accounts.length + 1}`;
 }
 
-export const IDENTITY_REQUIRED_MESSAGE =
-  "Verify your identity before adding an account.";
+export const FIRST_NAME_REQUIRED_MESSAGE =
+  "Enter a first name for this account.";
 
 /**
- * Enforced on every path that adds an account, so a complete identity is a
- * precondition for the vault holding any keys at all.
+ * Enforced on every path that adds an account, so no account can exist without
+ * a name to put in its memos.
  */
-function requireIdentity(session: VaultSession): void {
-  if (!hasIdentity(session.identity)) {
-    throw new Error(IDENTITY_REQUIRED_MESSAGE);
-  }
-}
-
-/** Replaces the stored identity. Rejects a partial one. */
-export async function saveIdentity(
-  session: VaultSession,
-  identity: Identity
-): Promise<VaultSession> {
-  if (!identity.firstName.trim() || !identity.lastName.trim()) {
-    throw new Error("First and last name are required.");
-  }
-  if (!identity.phone.trim()) {
-    throw new Error("Phone number is required.");
-  }
-
-  const next: VaultSession = { ...session, identity };
-  await persist(next);
-  return next;
+function requireFirstName(firstName: string): string {
+  const trimmed = firstName.trim();
+  if (!trimmed) throw new Error(FIRST_NAME_REQUIRED_MESSAGE);
+  return trimmed;
 }
 
 async function withAccounts(
@@ -151,14 +128,16 @@ async function withAccounts(
 
 export async function generateAccount(
   session: VaultSession,
+  firstName: string,
   name?: string
 ): Promise<{ session: VaultSession; account: StoredAccount }> {
-  requireIdentity(session);
+  const holder = requireFirstName(firstName);
 
   const keypair = Keypair.random();
   const account: StoredAccount = {
     id: crypto.randomUUID(),
     name: name?.trim() || nextName(session.accounts),
+    firstName: holder,
     publicKey: keypair.publicKey(),
     secret: keypair.secret(),
   };
@@ -171,9 +150,10 @@ export async function generateAccount(
 export async function importSecret(
   session: VaultSession,
   secret: string,
+  firstName: string,
   name?: string
 ): Promise<{ session: VaultSession; account: StoredAccount }> {
-  requireIdentity(session);
+  const holder = requireFirstName(firstName);
 
   const trimmed = secret.trim();
   if (!StrKey.isValidEd25519SecretSeed(trimmed)) {
@@ -191,18 +171,20 @@ export async function importSecret(
   // Importing the secret for an address already tracked as watch-only
   // upgrades it in place rather than creating a duplicate row.
   if (existing) {
+    const upgraded = { ...existing, secret: trimmed, firstName: holder };
     const accounts = session.accounts.map((a) =>
-      a.id === existing.id ? { ...a, secret: trimmed } : a
+      a.id === existing.id ? upgraded : a
     );
     return {
       session: await withAccounts(session, accounts),
-      account: { ...existing, secret: trimmed },
+      account: upgraded,
     };
   }
 
   const account: StoredAccount = {
     id: crypto.randomUUID(),
     name: name?.trim() || nextName(session.accounts),
+    firstName: holder,
     publicKey,
     secret: trimmed,
   };
@@ -215,9 +197,10 @@ export async function importSecret(
 export async function importWatchAddress(
   session: VaultSession,
   publicKey: string,
+  firstName: string,
   name?: string
 ): Promise<{ session: VaultSession; account: StoredAccount }> {
-  requireIdentity(session);
+  const holder = requireFirstName(firstName);
 
   const trimmed = publicKey.trim();
   if (!StrKey.isValidEd25519PublicKey(trimmed)) {
@@ -230,6 +213,7 @@ export async function importWatchAddress(
   const account: StoredAccount = {
     id: crypto.randomUUID(),
     name: name?.trim() || nextName(session.accounts),
+    firstName: holder,
     publicKey: trimmed,
   };
   return {

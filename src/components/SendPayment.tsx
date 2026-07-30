@@ -1,5 +1,4 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { useWallet } from "../context/WalletContext";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
 import type { StoredAccount } from "../lib/vault";
@@ -14,7 +13,6 @@ interface Props {
 }
 
 export function SendPayment({ account, network, summary, onRefresh }: Props) {
-  const { identity } = useWallet();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
   const [assetKey, setAssetKey] = useState("native");
@@ -46,6 +44,10 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
       setError("This account holds no assets to send.");
       return;
     }
+    if (!memo.trim()) {
+      setError("A memo is required.");
+      return;
+    }
 
     setBusy(true);
     try {
@@ -58,7 +60,7 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
         amount: amount.trim(),
         asset,
         memo,
-        identity,
+        firstName: account.firstName,
       });
 
       setStatus("Signing and submitting…");
@@ -134,11 +136,11 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
         </label>
 
         <label className="field">
-          <span>Memo (optional)</span>
+          <span>Memo</span>
           <input
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
-            placeholder="Exchanges often require this"
+            placeholder="Required"
             maxLength={28}
           />
         </label>

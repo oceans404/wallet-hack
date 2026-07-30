@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { useWallet } from "../context/WalletContext";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
 import type { StoredAccount } from "../lib/vault";
@@ -18,7 +17,6 @@ interface Props {
  * 0.5 XLM of reserve, which is why removal is offered too.
  */
 export function Trustlines({ account, network, summary, onRefresh }: Props) {
-  const { identity } = useWallet();
   const [code, setCode] = useState("");
   const [issuer, setIssuer] = useState("");
   const [limit, setLimit] = useState("");
@@ -48,7 +46,7 @@ export function Trustlines({ account, network, summary, onRefresh }: Props) {
         source: account.publicKey,
         asset: parseAsset(assetCode, assetIssuer),
         limit: newLimit,
-        identity,
+        firstName: account.firstName,
       });
       const submitted = await signAndSubmit(network, transaction, account.secret);
       setNotice(

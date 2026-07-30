@@ -12,7 +12,6 @@ import {
   storeNetwork,
   type NetworkId,
 } from "../lib/network";
-import { EMPTY_IDENTITY, type Identity } from "../lib/identity";
 import {
   createVault,
   destroyVault,
@@ -21,7 +20,6 @@ import {
   importWatchAddress,
   removeAccount,
   renameAccount,
-  saveIdentity,
   unlockVault,
   vaultExists,
   type StoredAccount,
@@ -38,20 +36,22 @@ interface WalletContextValue {
   selectedAccount: StoredAccount | null;
   selectAccount: (id: string) => void;
 
-  /** Empty until the vault is unlocked. Attached to every outgoing memo. */
-  identity: Identity;
-
-  createWallet: (password: string, identity: Identity) => Promise<void>;
+  createWallet: (password: string) => Promise<void>;
   unlock: (password: string) => Promise<void>;
   lock: () => void;
   reset: () => void;
 
-  /** For vaults created before onboarding required personal details. */
-  setIdentity: (identity: Identity) => Promise<void>;
-
-  addGeneratedAccount: (name?: string) => Promise<StoredAccount>;
-  addImportedSecret: (secret: string, name?: string) => Promise<StoredAccount>;
-  addWatchAddress: (publicKey: string, name?: string) => Promise<StoredAccount>;
+  addGeneratedAccount: (firstName: string, name?: string) => Promise<StoredAccount>;
+  addImportedSecret: (
+    secret: string,
+    firstName: string,
+    name?: string
+  ) => Promise<StoredAccount>;
+  addWatchAddress: (
+    publicKey: string,
+    firstName: string,
+    name?: string
+  ) => Promise<StoredAccount>;
   rename: (id: string, name: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
 }
@@ -87,13 +87,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     storeNetwork(id);
   }, []);
 
-  const createWallet = useCallback(
-    async (password: string, identity: Identity) => {
-      setSession(await createVault(password, identity));
-      setHasVault(true);
-    },
-    []
-  );
+  const createWallet = useCallback(async (password: string) => {
+    setSession(await createVault(password));
+    setHasVault(true);
+  }, []);
 
   const unlock = useCallback(async (password: string) => {
     setSession(await unlockVault(password));
@@ -132,28 +129,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 
   const addGeneratedAccount = useCallback(
-    (name?: string) => mutateWithAccount((s) => generateAccount(s, name)),
+    (firstName: string, name?: string) =>
+      mutateWithAccount((s) => generateAccount(s, firstName, name)),
     [mutateWithAccount]
   );
 
   const addImportedSecret = useCallback(
-    (secret: string, name?: string) =>
-      mutateWithAccount((s) => importSecret(s, secret, name)),
+    (secret: string, firstName: string, name?: string) =>
+      mutateWithAccount((s) => importSecret(s, secret, firstName, name)),
     [mutateWithAccount]
   );
 
   const addWatchAddress = useCallback(
-    (publicKey: string, name?: string) =>
-      mutateWithAccount((s) => importWatchAddress(s, publicKey, name)),
+    (publicKey: string, firstName: string, name?: string) =>
+      mutateWithAccount((s) => importWatchAddress(s, publicKey, firstName, name)),
     [mutateWithAccount]
-  );
-
-  const setIdentity = useCallback(
-    async (identity: Identity) => {
-      if (!session) throw new Error("Wallet is locked.");
-      setSession(await saveIdentity(session, identity));
-    },
-    [session]
   );
 
   const rename = useCallback(
@@ -181,12 +171,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       accounts,
       selectedAccount,
       selectAccount: setSelectedId,
-      identity: session?.identity ?? EMPTY_IDENTITY,
       createWallet,
       unlock,
       lock,
       reset,
-      setIdentity,
       addGeneratedAccount,
       addImportedSecret,
       addWatchAddress,
@@ -204,7 +192,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       unlock,
       lock,
       reset,
-      setIdentity,
       addGeneratedAccount,
       addImportedSecret,
       addWatchAddress,
