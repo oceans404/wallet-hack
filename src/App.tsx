@@ -6,19 +6,17 @@ import { Balances } from "./components/Balances";
 import { SendPayment } from "./components/SendPayment";
 import { Trustlines } from "./components/Trustlines";
 import { History } from "./components/History";
-import { ContractLab } from "./components/ContractLab";
 import { Unlock } from "./components/Unlock";
 import { NETWORK_IDS, getNetworkConfig } from "./lib/network";
 import "./App.css";
 
-type Tab = "balances" | "send" | "trustlines" | "history" | "contracts";
+type Tab = "balances" | "send" | "trustlines" | "history";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "balances", label: "Balances" },
   { id: "send", label: "Send" },
   { id: "trustlines", label: "Trustlines" },
   { id: "history", label: "Activity" },
-  { id: "contracts", label: "Contracts" },
 ];
 
 function Workspace() {
@@ -122,10 +120,6 @@ function Workspace() {
 
               {tab === "history" && (
                 <History network={network} history={history} loading={loading} />
-              )}
-
-              {tab === "contracts" && (
-                <ContractLab account={selectedAccount} network={network} />
               )}
             </>
           )}
