@@ -6,20 +6,100 @@ accounts and works against both testnet and mainnet.
 
 Built following the guidance at [skills.stellar.org](https://skills.stellar.org).
 
-## Running it
+## Run it locally
+
+You need **Node.js 22 or newer**. Stellar SDK v16 sets that as its minimum, and
+older versions fail with an `EBADENGINE` warning. Check with `node --version`.
 
 ```bash
+git clone <your-repo-url>
+cd wallet-hack
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173. On first load you set a password, which creates the
-encrypted vault. Add an account, fund it with Friendbot on testnet, and you can
-send.
+Open **http://localhost:5173**.
 
-For mainnet Soroban contract calls, copy `.env.example` to `.env` and set
-`VITE_STELLAR_MAINNET_RPC_URL` to a provider endpoint. Everything else on
-mainnet works without it.
+### First run, step by step
+
+1. **Set a password.** This creates the encrypted vault. It is not recoverable,
+   so use something you will remember (or a password manager).
+2. **Add an account.** Sidebar, *+ Add account*, then *Add*. This generates a
+   fresh keypair and stores it encrypted.
+3. **Fund it.** You start on testnet, so the Balances tab offers *Fund with
+   Friendbot*. That drops 10,000 test XLM in. One click, no signup.
+4. **Try it out.** Send a payment to another account you add, put a trustline on
+   an asset, or open the Contracts tab and load a contract ID.
+
+Handy testnet contract to poke at, the native XLM Stellar Asset Contract:
+
+```
+CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
+```
+
+Load it, pick `decimals` or `balance`, and hit *Simulate*. Simulation is free
+and submits nothing.
+
+### Scripts
+
+| Command           | What it does                              |
+| ----------------- | ----------------------------------------- |
+| `npm run dev`     | Dev server with hot reload on port 5173   |
+| `npm run build`   | Typecheck (`tsc -b`) then production build |
+| `npm run preview` | Serve the built `dist/` locally           |
+| `npm run lint`    | Oxlint                                    |
+
+### Mainnet
+
+The network toggle in the header switches to mainnet, and a banner appears
+because transactions there move real funds. Balances, payments, trustlines, and
+history all work with no extra setup.
+
+Soroban **contract calls** on mainnet need an RPC endpoint, because there is no
+free public one. Copy the example env file and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+```
+VITE_STELLAR_MAINNET_RPC_URL=https://your-provider.example/rpc
+```
+
+Pick a provider from the
+[RPC provider list](https://developers.stellar.org/docs/data/apis/rpc/providers).
+Restart the dev server after editing `.env`. Until it is set, the Contracts tab
+explains what is missing instead of failing at call time.
+
+## Deploying to Vercel
+
+`vercel.json` is checked in, so the build settings, SPA rewrite, cache headers,
+and security headers are already configured.
+
+```bash
+npm i -g vercel
+vercel        # preview deployment
+vercel --prod # production
+```
+
+Or connect the Git repo at [vercel.com/new](https://vercel.com/new) for a deploy
+on every push. Vercel detects Vite and reads `vercel.json` either way.
+
+Two things to set up in the dashboard:
+
+- **Environment variable.** If you want mainnet contract calls in the deployed
+  app, add `VITE_STELLAR_MAINNET_RPC_URL` under Settings, Environment Variables.
+  It is baked in at build time, so redeploy after adding it. Note that anything
+  prefixed `VITE_` ships to the browser and is publicly readable, so use a
+  provider key that is domain-restricted or safe to expose.
+- **Content Security Policy.** The CSP in `vercel.json` allows connections only
+  to the four known Stellar hosts. Adding your own RPC provider means adding its
+  origin to `connect-src`, or the browser blocks the request. The trade-off is
+  deliberate: a wallet holding keys in `localStorage` benefits from a strict
+  `connect-src`, since it limits where a compromised dependency could send them.
+
+The CSP also sets `frame-ancestors 'none'`, which stops the wallet being
+embedded in an iframe on another site. Keep that.
 
 ## What it does
 
