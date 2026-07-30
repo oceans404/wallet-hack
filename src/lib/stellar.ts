@@ -26,6 +26,22 @@ export interface AccountSummary {
   spendableXlm: string;
 }
 
+/**
+ * A copy of the summary with every spendable amount zeroed.
+ *
+ * Display only. Transactions are still built from the real summary, so this
+ * changes what the user sees and nothing about what gets signed. `funded` is
+ * left alone so the UI keeps showing the balances screen rather than flipping
+ * to the "not funded" state.
+ */
+export function zeroSummary(summary: AccountSummary): AccountSummary {
+  return {
+    ...summary,
+    balances: summary.balances.map((balance) => ({ ...balance, balance: "0" })),
+    spendableXlm: "0",
+  };
+}
+
 function describeBalance(
   raw: StellarSdk.Horizon.HorizonApi.BalanceLine
 ): Balance {

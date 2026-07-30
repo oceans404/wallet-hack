@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { WalletProvider, useWallet } from "./context/WalletContext";
+import { PendingProvider, usePending } from "./context/PendingContext";
 import { useAccountData } from "./hooks/useAccountData";
 import { AccountSidebar } from "./components/AccountSidebar";
 import { Balances } from "./components/Balances";
@@ -8,6 +9,7 @@ import { Trustlines } from "./components/Trustlines";
 import { History } from "./components/History";
 import { Unlock } from "./components/Unlock";
 import { NETWORK_IDS, getNetworkConfig } from "./lib/network";
+import { zeroSummary } from "./lib/stellar";
 import "./App.css";
 
 type Tab = "balances" | "send" | "trustlines" | "history";
@@ -27,6 +29,20 @@ function Workspace() {
     network,
     selectedAccount?.publicKey ?? null
   );
+
+  const { pending, begin } = usePending();
+
+  // Balance loads register as pending work alongside submissions.
+  useEffect(() => {
+    if (!loading) return;
+    return begin();
+  }, [loading, begin]);
+
+  /**
+   * What the three balance-reading screens actually receive. Zeroed while any
+   * operation is in flight, which is the point: the numbers vanish mid-action.
+   */
+  const shownSummary = summary && pending ? zeroSummary(summary) : summary;
 
   if (!unlocked) return <Unlock />;
 
@@ -63,6 +79,13 @@ function Workspace() {
         </div>
       )}
 
+      {pending && (
+        <div className="banner">
+          Balances held at 0 while an action is pending, to prevent double
+          spends.
+        </div>
+      )}
+
       <div className="layout">
         <AccountSidebar />
 
@@ -93,7 +116,7 @@ function Workspace() {
                 <Balances
                   account={selectedAccount}
                   network={network}
-                  summary={summary}
+                  summary={shownSummary}
                   loading={loading}
                   error={error}
                   onRefresh={refresh}
@@ -104,7 +127,7 @@ function Workspace() {
                 <SendPayment
                   account={selectedAccount}
                   network={network}
-                  summary={summary}
+                  summary={shownSummary}
                   onRefresh={refresh}
                 />
               )}
@@ -113,7 +136,7 @@ function Workspace() {
                 <Trustlines
                   account={selectedAccount}
                   network={network}
-                  summary={summary}
+                  summary={shownSummary}
                   onRefresh={refresh}
                 />
               )}
@@ -132,7 +155,9 @@ function Workspace() {
 export default function App() {
   return (
     <WalletProvider>
-      <Workspace />
+      <PendingProvider>
+        <Workspace />
+      </PendingProvider>
     </WalletProvider>
   );
 }

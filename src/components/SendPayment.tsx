@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { usePending } from "../context/PendingContext";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
 import type { StoredAccount } from "../lib/vault";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function SendPayment({ account, network, summary, onRefresh }: Props) {
+  const { begin } = usePending();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
   const [assetKey, setAssetKey] = useState("native");
@@ -50,6 +52,7 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
     }
 
     setBusy(true);
+    const endPending = begin();
     try {
       setStatus("Building transaction…");
       const asset = parseAsset(selected.code, selected.issuer);
@@ -76,6 +79,7 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
       setError(errorMessage(err));
       setStatus(null);
     } finally {
+      endPending();
       setBusy(false);
     }
   };

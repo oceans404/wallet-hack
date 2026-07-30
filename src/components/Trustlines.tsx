@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { usePending } from "../context/PendingContext";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
 import type { StoredAccount } from "../lib/vault";
@@ -17,6 +18,7 @@ interface Props {
  * 0.5 XLM of reserve, which is why removal is offered too.
  */
 export function Trustlines({ account, network, summary, onRefresh }: Props) {
+  const { begin } = usePending();
   const [code, setCode] = useState("");
   const [issuer, setIssuer] = useState("");
   const [limit, setLimit] = useState("");
@@ -40,6 +42,7 @@ export function Trustlines({ account, network, summary, onRefresh }: Props) {
     setError(null);
     setNotice(null);
     setBusy(true);
+    const endPending = begin();
     try {
       const transaction = await buildTrustlineTx({
         network,
@@ -59,6 +62,7 @@ export function Trustlines({ account, network, summary, onRefresh }: Props) {
     } catch (err) {
       setError(errorMessage(err));
     } finally {
+      endPending();
       setBusy(false);
     }
   };

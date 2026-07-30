@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { AccountSummary } from "../lib/stellar";
 import { fundWithFriendbot } from "../lib/stellar";
+import { usePending } from "../context/PendingContext";
 import type { NetworkId } from "../lib/network";
 import { getNetworkConfig } from "../lib/network";
 import type { StoredAccount } from "../lib/vault";
@@ -38,6 +39,7 @@ export function Balances({
   error,
   onRefresh,
 }: Props) {
+  const { begin } = usePending();
   const [copied, setCopied] = useState<"address" | "secret" | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [funding, setFunding] = useState(false);
@@ -54,12 +56,14 @@ export function Balances({
   const handleFund = async () => {
     setFundError(null);
     setFunding(true);
+    const endPending = begin();
     try {
       await fundWithFriendbot(network, account.publicKey);
       onRefresh();
     } catch (err) {
       setFundError(errorMessage(err));
     } finally {
+      endPending();
       setFunding(false);
     }
   };
