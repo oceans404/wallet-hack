@@ -142,7 +142,12 @@ function Workspace() {
               )}
 
               {tab === "history" && (
-                <History network={network} history={history} loading={loading} />
+                <History
+                  network={network}
+                  history={history}
+                  loading={loading}
+                  account={selectedAccount}
+                />
               )}
             </>
           )}

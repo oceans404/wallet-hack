@@ -1,6 +1,7 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { NotFoundError } from "@stellar/stellar-sdk";
 import { getHorizon, getNetworkConfig, type NetworkId } from "./network";
+import { formatStroops } from "./format";
 
 export interface Balance {
   /** "native" for XLM, otherwise `CODE:ISSUER`. Unique within an account. */
@@ -126,6 +127,25 @@ export interface HistoryEntry {
   summary: string;
   /** Direction relative to the viewing account, when meaningful. */
   direction: "in" | "out" | "self" | null;
+  /** Every field Horizon returned, for the Activity tab to render in full. */
+  raw: Record<string, unknown>;
+  /** The account this history was loaded for, for labelling counterparties. */
+  viewer: string;
+  /** Position in the returned page, 1-based. */
+  index: number;
+  /** Total records in the returned page. */
+  total: number;
+}
+
+/**
+ * Horizon's records carry SDK helper methods (`transaction()`, `effects()`)
+ * alongside the data. Those are dropped so the rest can be rendered and
+ * serialised.
+ */
+function rawFields(op: object): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(op).filter(([, value]) => typeof value !== "function")
+  );
 }
 
 function summarize(
@@ -141,9 +161,9 @@ function summarize(
       const incoming = op.to === viewer;
       const other = incoming ? op.from : op.to;
       return {
-        summary: `${incoming ? "Received" : "Sent"} ${op.amount} ${assetName(op)} ${
+        summary: `${incoming ? "Received" : "Sent"} ${formatStroops(op.amount)} stroops of ${assetName(op)} ${
           incoming ? "from" : "to"
-        } ${other.slice(0, 4)}…${other.slice(-4)}`,
+        } ${other}`,
         direction: op.from === op.to ? "self" : incoming ? "in" : "out",
       };
     }
@@ -151,8 +171,8 @@ function summarize(
       const incoming = op.account === viewer;
       return {
         summary: incoming
-          ? `Account created with ${op.starting_balance} XLM`
-          : `Created account ${op.account.slice(0, 4)}…${op.account.slice(-4)} with ${op.starting_balance} XLM`,
+          ? `Account created with ${formatStroops(op.starting_balance)} stroops of XLM`
+          : `Created account ${op.account} with ${formatStroops(op.starting_balance)} stroops of XLM`,
         direction: incoming ? "in" : "out",
       };
     }
@@ -167,7 +187,7 @@ function summarize(
     case "path_payment_strict_receive": {
       const incoming = op.to === viewer;
       return {
-        summary: `${incoming ? "Received" : "Sent"} ${op.amount} ${assetName(op)} via path payment`,
+        summary: `${incoming ? "Received" : "Sent"} ${formatStroops(op.amount)} stroops of ${assetName(op)} via path payment`,
         direction: incoming ? "in" : "out",
       };
     }
@@ -193,7 +213,7 @@ export async function loadHistory(
       .limit(limit)
       .call();
 
-    return page.records.map((op) => {
+    return page.records.map((op, i) => {
       const { summary, direction } = summarize(op, publicKey);
       return {
         id: op.id,
@@ -203,6 +223,10 @@ export async function loadHistory(
         successful: op.transaction_successful,
         summary,
         direction,
+        raw: rawFields(op),
+        viewer: publicKey,
+        index: i + 1,
+        total: page.records.length,
       };
     });
   } catch (error) {

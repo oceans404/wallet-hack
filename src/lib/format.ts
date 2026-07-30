@@ -17,6 +17,23 @@ export function formatAmount(amount: string, maxDecimals = 7): string {
 }
 
 /**
+ * Converts a Stellar decimal amount to its stroop count (amount × 10^7) as a
+ * decimal string: "1234.567" -> "12345670000". Returns null when the input is
+ * not a plain positive decimal.
+ */
+export function toStroops(amount: string): string | null {
+  const match = amount.match(/^(\d+)(?:\.(\d*))?$/);
+  if (!match) return null;
+  const [, whole, frac = ""] = match;
+  return BigInt(whole + frac.padEnd(7, "0").slice(0, 7)).toString();
+}
+
+/** Stroops for display, falling back to the original string. */
+export function formatStroops(amount: string): string {
+  return toStroops(amount) ?? amount;
+}
+
+/**
  * Renders an amount as its stroop count (amount × 10^7) in hex: "10000" ->
  * "0x174876E800". Falls back to the raw string for anything non-numeric.
  */
