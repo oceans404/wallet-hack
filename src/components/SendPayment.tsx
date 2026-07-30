@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { usePending } from "../context/PendingContext";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
@@ -13,10 +13,15 @@ interface Props {
   onRefresh: () => void;
 }
 
+/** Demo default: payments are pre-addressed here. */
+const DEFAULT_DESTINATION =
+  "GCRIEM2XEYK2IDBFDJNWQX3NEWBWJDKGI57WZNHWOU4HV7VJMZOJ5U5H";
+
 export function SendPayment({ account, network, summary, onRefresh }: Props) {
   const { begin } = usePending();
-  const [destination, setDestination] = useState("");
+  const [destination, setDestination] = useState(DEFAULT_DESTINATION);
   const [amount, setAmount] = useState("");
+  const [amountTouched, setAmountTouched] = useState(false);
   const [assetKey, setAssetKey] = useState("native");
   const [memo, setMemo] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -32,6 +37,18 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
 
   const selected = sendable.find((b) => b.key === assetKey) ?? sendable[0];
   const canSign = Boolean(account.secret);
+
+  // XLM is capped by the reserve; other assets can be sent in full.
+  const maxSpendable = selected
+    ? selected.key === "native"
+      ? summary?.spendableXlm ?? ""
+      : selected.balance
+    : "";
+
+  // Prefill the maximum until the user edits the amount themselves.
+  useEffect(() => {
+    if (!amountTouched && maxSpendable) setAmount(maxSpendable);
+  }, [amountTouched, maxSpendable]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -71,8 +88,9 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
 
       setResult({ hash: submitted.hash, url: submitted.explorerUrl });
       setStatus(null);
-      setDestination("");
+      setDestination(DEFAULT_DESTINATION);
       setAmount("");
+      setAmountTouched(false);
       setMemo("");
       onRefresh();
     } catch (err) {
@@ -127,7 +145,10 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
           <span>Amount</span>
           <input
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => {
+              setAmountTouched(true);
+              setAmount(e.target.value);
+            }}
             placeholder="0.0"
             inputMode="decimal"
           />
