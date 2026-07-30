@@ -74,41 +74,57 @@ export function Balances({
           </button>
         </div>
 
-        <div className="address-block">
-          <code className="address">{account.publicKey}</code>
-          <button
-            className="btn btn-sm"
-            onClick={() => copy(account.publicKey, "address")}
-          >
-            {copied === "address" ? "Copied" : "Copy"}
-          </button>
-        </div>
-
         {account.secret ? (
-          <div className="secret-block">
-            {revealed ? (
-              <>
-                <code className="address secret">{account.secret}</code>
-                <button
-                  className="btn btn-sm"
-                  onClick={() => copy(account.secret!, "secret")}
-                >
-                  {copied === "secret" ? "Copied" : "Copy"}
-                </button>
-                <button className="btn btn-sm" onClick={() => setRevealed(false)}>
-                  Hide
-                </button>
-              </>
-            ) : (
-              <button className="btn-link" onClick={() => setRevealed(true)}>
-                Reveal secret key
+          <>
+            <div className="address-block">
+              <code className="address secret">{account.secret}</code>
+              <button
+                className="btn btn-sm"
+                onClick={() => copy(account.secret!, "secret")}
+              >
+                {copied === "secret" ? "Copied" : "Copy"}
               </button>
-            )}
-          </div>
+            </div>
+
+            <div className="secret-block">
+              {revealed ? (
+                <>
+                  <code className="address">{account.publicKey}</code>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => copy(account.publicKey, "address")}
+                  >
+                    {copied === "address" ? "Copied" : "Copy"}
+                  </button>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => setRevealed(false)}
+                  >
+                    Hide
+                  </button>
+                </>
+              ) : (
+                <button className="btn-link" onClick={() => setRevealed(true)}>
+                  Reveal public key
+                </button>
+              )}
+            </div>
+          </>
         ) : (
-          <p className="muted small">
-            Watch-only. Import this address's secret key to send from it.
-          </p>
+          <>
+            <div className="address-block">
+              <code className="address">{account.publicKey}</code>
+              <button
+                className="btn btn-sm"
+                onClick={() => copy(account.publicKey, "address")}
+              >
+                {copied === "address" ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="muted small">
+              Watch-only. Import this address's secret key to send from it.
+            </p>
+          </>
         )}
       </section>
 
