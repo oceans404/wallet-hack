@@ -67,7 +67,7 @@ export function Unlock() {
         <label className="field">
           <span>Password</span>
           <input
-            type="password"
+            type="text"
             autoFocus
             autoComplete={creating ? "new-password" : "current-password"}
             value={password}
@@ -80,7 +80,7 @@ export function Unlock() {
           <label className="field">
             <span>Confirm password</span>
             <input
-              type="password"
+              type="text"
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
