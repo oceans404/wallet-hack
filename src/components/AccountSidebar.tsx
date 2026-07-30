@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useWallet } from "../context/WalletContext";
-import { errorMessage, shortenAddress } from "../lib/format";
+import { errorMessage } from "../lib/format";
 
 type AddMode = "generate" | "secret" | "watch";
 
@@ -90,7 +90,7 @@ export function AccountSidebar() {
                   )}
                 </span>
                 <span className="account-address">
-                  {shortenAddress(account.publicKey, 6, 6)}
+                  {account.publicKey}
                 </span>
               </button>
               <button

@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { usePending } from "../context/PendingContext";
+import { DelayBar } from "./DelayBar";
+import { mandatoryDelay } from "../lib/delay";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
 import type { StoredAccount } from "../lib/vault";
@@ -25,6 +27,7 @@ export function Trustlines({ account, network, summary, onRefresh }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [delaying, setDelaying] = useState(false);
 
   const existing =
     summary?.balances.filter((b) => b.key !== "native" && !b.isPoolShare) ?? [];
@@ -44,6 +47,10 @@ export function Trustlines({ account, network, summary, onRefresh }: Props) {
     setBusy(true);
     const endPending = begin();
     try {
+      setDelaying(true);
+      await mandatoryDelay();
+      setDelaying(false);
+
       const transaction = await buildTrustlineTx({
         network,
         source: account.publicKey,
@@ -62,6 +69,7 @@ export function Trustlines({ account, network, summary, onRefresh }: Props) {
     } catch (err) {
       setError(errorMessage(err));
     } finally {
+      setDelaying(false);
       endPending();
       setBusy(false);
     }
@@ -174,6 +182,7 @@ export function Trustlines({ account, network, summary, onRefresh }: Props) {
             </small>
           </label>
 
+          {delaying && <DelayBar />}
           {error && <p className="alert alert-error">{error}</p>}
           {notice && <p className="alert alert-success">{notice}</p>}
 

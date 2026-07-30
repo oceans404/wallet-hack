@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { usePending } from "../context/PendingContext";
+import { DelayBar } from "./DelayBar";
+import { mandatoryDelay } from "../lib/delay";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
 import type { StoredAccount } from "../lib/vault";
@@ -28,6 +30,7 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
   const [result, setResult] = useState<{ hash: string; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [delaying, setDelaying] = useState(false);
 
   // Pool shares can't be sent as payments, so they're excluded from the picker.
   const sendable = useMemo(
@@ -71,6 +74,10 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
     setBusy(true);
     const endPending = begin();
     try {
+      setDelaying(true);
+      await mandatoryDelay();
+      setDelaying(false);
+
       setStatus("Building transaction…");
       const asset = parseAsset(selected.code, selected.issuer);
       const transaction = await buildPaymentTx({
@@ -97,6 +104,7 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
       setError(errorMessage(err));
       setStatus(null);
     } finally {
+      setDelaying(false);
       endPending();
       setBusy(false);
     }
@@ -170,6 +178,7 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
           />
         </label>
 
+        {delaying && <DelayBar />}
         {status && <p className="alert">{status}</p>}
         {error && <p className="alert alert-error">{error}</p>}
         {result && (

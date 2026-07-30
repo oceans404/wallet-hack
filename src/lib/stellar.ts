@@ -213,7 +213,9 @@ export async function loadHistory(
       .limit(limit)
       .call();
 
-    return page.records.map((op, i) => {
+    // Newest 25 are fetched, then reversed for display, so the most recent
+    // operation sits at the bottom under 24 older ones.
+    return [...page.records].reverse().map((op, i) => {
       const { summary, direction } = summarize(op, publicKey);
       return {
         id: op.id,

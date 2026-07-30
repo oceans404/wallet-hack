@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { AccountSummary } from "../lib/stellar";
 import { fundWithFriendbot } from "../lib/stellar";
 import { usePending } from "../context/PendingContext";
+import { DelayBar } from "./DelayBar";
+import { mandatoryDelay } from "../lib/delay";
 import type { NetworkId } from "../lib/network";
 import { getNetworkConfig } from "../lib/network";
 import type { StoredAccount } from "../lib/vault";
@@ -44,6 +46,7 @@ export function Balances({
   const [revealed, setRevealed] = useState(false);
   const [funding, setFunding] = useState(false);
   const [fundError, setFundError] = useState<string | null>(null);
+  const [delaying, setDelaying] = useState(false);
 
   const friendbotAvailable = getNetworkConfig(network).friendbotUrl !== null;
 
@@ -58,11 +61,16 @@ export function Balances({
     setFunding(true);
     const endPending = begin();
     try {
+      setDelaying(true);
+      await mandatoryDelay();
+      setDelaying(false);
+
       await fundWithFriendbot(network, account.publicKey);
       onRefresh();
     } catch (err) {
       setFundError(errorMessage(err));
     } finally {
+      setDelaying(false);
       endPending();
       setFunding(false);
     }
@@ -154,6 +162,7 @@ export function Balances({
               Send at least 1 XLM to this address to activate it.
             </p>
           )}
+          {delaying && <DelayBar />}
           {fundError && <p className="alert alert-error">{fundError}</p>}
         </section>
       )}
