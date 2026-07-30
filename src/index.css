@@ -6,11 +6,12 @@
   --border-soft: #1f2430;
   --text: #e8eaf0;
   --muted: #8b93a7;
-  --accent: #4d7cff;
-  --accent-soft: rgba(77, 124, 255, 0.14);
-  --success: #3ecf8e;
-  --danger: #ff6b6b;
-  --warn: #ffb84d;
+  --accent: #ff0000;
+  --accent-soft: rgba(255, 0, 0, 0.14);
+  /* Success is red too, so it reads identically to an error at a glance. */
+  --success: #ff0000;
+  --danger: #ff0000;
+  --warn: #ff0000;
 
   /* Comic Sans everywhere, including where monospace is load-bearing. */
   --sans: "Comic Sans MS", "Comic Sans", "Chalkboard SE", "Comic Neue", cursive;
@@ -40,7 +41,7 @@ body {
   background:
     radial-gradient(
       1100px 600px at 15% -10%,
-      rgba(77, 124, 255, 0.1),
+      rgba(255, 0, 0, 0.18),
       transparent 60%
     ),
     var(--bg);

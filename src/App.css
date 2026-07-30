@@ -35,8 +35,8 @@
 
 .banner {
   padding: 0.6rem 1.25rem;
-  background: rgba(255, 184, 77, 0.12);
-  border-bottom: 1px solid rgba(255, 184, 77, 0.25);
+  background: rgba(255, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(255, 0, 0, 0.25);
   color: var(--warn);
   font-size: 0.85rem;
 }
@@ -187,8 +187,8 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #3d6ced;
-  border-color: #3d6ced;
+  background: #cc0000;
+  border-color: #cc0000;
 }
 
 .btn-sm {
@@ -229,7 +229,7 @@
 }
 .icon-btn:hover {
   color: var(--danger);
-  background: rgba(255, 107, 107, 0.1);
+  background: rgba(255, 0, 0, 0.1);
 }
 
 .pill {
@@ -251,7 +251,7 @@
   letter-spacing: 0.04em;
 }
 .tag.failed {
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(255, 0, 0, 0.15);
   color: var(--danger);
 }
 
@@ -265,14 +265,14 @@
   overflow-wrap: anywhere;
 }
 .alert-error {
-  background: rgba(255, 107, 107, 0.1);
-  border-color: rgba(255, 107, 107, 0.3);
-  color: #ffb0b0;
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.3);
+  color: #ff9d9d;
 }
 .alert-success {
-  background: rgba(62, 207, 142, 0.1);
-  border-color: rgba(62, 207, 142, 0.3);
-  color: #8ce8bd;
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.3);
+  color: #ff9d9d;
 }
 
 /* ---------- unlock gate ---------- */
@@ -347,7 +347,7 @@
 
 .account-row.active {
   background: var(--accent-soft);
-  border-color: rgba(77, 124, 255, 0.35);
+  border-color: rgba(255, 0, 0, 0.35);
 }
 
 .account-main {
@@ -474,7 +474,7 @@
 
 .address.secret {
   color: var(--warn);
-  border-color: rgba(255, 184, 77, 0.3);
+  border-color: rgba(255, 0, 0, 0.3);
 }
 
 .balance-list {
@@ -571,11 +571,11 @@
 }
 
 .history-glyph.dir-in {
-  background: rgba(62, 207, 142, 0.12);
+  background: rgba(255, 0, 0, 0.12);
   color: var(--success);
 }
 .history-glyph.dir-out {
-  background: rgba(77, 124, 255, 0.12);
+  background: rgba(255, 0, 0, 0.12);
   color: var(--accent);
 }
 
@@ -618,7 +618,7 @@
 
 .method-chip.active {
   background: var(--accent-soft);
-  border-color: rgba(77, 124, 255, 0.45);
+  border-color: rgba(255, 0, 0, 0.45);
   color: var(--accent);
 }
 
