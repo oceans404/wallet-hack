@@ -73,7 +73,7 @@ export function Unlock() {
       <form className="gate-card" onSubmit={handleSubmit}>
         <div className="gate-brand">
           <span className="gate-logo">✦</span>
-          <h1>Stellar Wallet</h1>
+          <h1>Trust Me Bro.XRP</h1>
         </div>
 
         <p className="gate-copy">

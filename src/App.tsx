@@ -35,7 +35,7 @@ function Workspace() {
       <header className="topbar">
         <div className="brand">
           <span className="logo">✦</span>
-          <span>Stellar Wallet</span>
+          <span>Trust Me Bro.XRP</span>
         </div>
 
         <div className="row gap center">
