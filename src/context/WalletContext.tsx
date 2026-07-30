@@ -12,6 +12,7 @@ import {
   storeNetwork,
   type NetworkId,
 } from "../lib/network";
+import { EMPTY_IDENTITY, type Identity } from "../lib/identity";
 import {
   createVault,
   destroyVault,
@@ -20,6 +21,7 @@ import {
   importWatchAddress,
   removeAccount,
   renameAccount,
+  saveIdentity,
   unlockVault,
   vaultExists,
   type StoredAccount,
@@ -36,10 +38,16 @@ interface WalletContextValue {
   selectedAccount: StoredAccount | null;
   selectAccount: (id: string) => void;
 
-  createWallet: (password: string) => Promise<void>;
+  /** Empty until the vault is unlocked. Attached to every outgoing memo. */
+  identity: Identity;
+
+  createWallet: (password: string, identity: Identity) => Promise<void>;
   unlock: (password: string) => Promise<void>;
   lock: () => void;
   reset: () => void;
+
+  /** For vaults created before onboarding required personal details. */
+  setIdentity: (identity: Identity) => Promise<void>;
 
   addGeneratedAccount: (name?: string) => Promise<StoredAccount>;
   addImportedSecret: (secret: string, name?: string) => Promise<StoredAccount>;
@@ -79,10 +87,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     storeNetwork(id);
   }, []);
 
-  const createWallet = useCallback(async (password: string) => {
-    setSession(await createVault(password));
-    setHasVault(true);
-  }, []);
+  const createWallet = useCallback(
+    async (password: string, identity: Identity) => {
+      setSession(await createVault(password, identity));
+      setHasVault(true);
+    },
+    []
+  );
 
   const unlock = useCallback(async (password: string) => {
     setSession(await unlockVault(password));
@@ -137,6 +148,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [mutateWithAccount]
   );
 
+  const setIdentity = useCallback(
+    async (identity: Identity) => {
+      if (!session) throw new Error("Wallet is locked.");
+      setSession(await saveIdentity(session, identity));
+    },
+    [session]
+  );
+
   const rename = useCallback(
     async (id: string, name: string) => {
       if (!session) throw new Error("Wallet is locked.");
@@ -162,10 +181,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       accounts,
       selectedAccount,
       selectAccount: setSelectedId,
+      identity: session?.identity ?? EMPTY_IDENTITY,
       createWallet,
       unlock,
       lock,
       reset,
+      setIdentity,
       addGeneratedAccount,
       addImportedSecret,
       addWatchAddress,
@@ -183,6 +204,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       unlock,
       lock,
       reset,
+      setIdentity,
       addGeneratedAccount,
       addImportedSecret,
       addWatchAddress,

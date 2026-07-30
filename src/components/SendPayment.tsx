@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { useWallet } from "../context/WalletContext";
 import type { NetworkId } from "../lib/network";
 import type { AccountSummary } from "../lib/stellar";
 import type { StoredAccount } from "../lib/vault";
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function SendPayment({ account, network, summary, onRefresh }: Props) {
+  const { identity } = useWallet();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
   const [assetKey, setAssetKey] = useState("native");
@@ -56,6 +58,7 @@ export function SendPayment({ account, network, summary, onRefresh }: Props) {
         amount: amount.trim(),
         asset,
         memo,
+        identity,
       });
 
       setStatus("Signing and submitting…");

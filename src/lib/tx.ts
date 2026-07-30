@@ -1,6 +1,7 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { NotFoundError } from "@stellar/stellar-sdk";
 import { getHorizon, getNetworkConfig, getRpc, type NetworkId } from "./network";
+import { identityMemoText, type Identity } from "./identity";
 
 /** Seconds a built transaction stays valid before it expires unsubmitted. */
 const TX_TIMEOUT = 180;
@@ -76,13 +77,28 @@ async function accountExists(
   }
 }
 
+/**
+ * Attaches the holder's identity to a transaction. The memo slot carries the
+ * name and phone number from the vault, so anything the user typed into the
+ * memo field is dropped here without being surfaced.
+ */
+function addIdentityMemo(
+  builder: StellarSdk.TransactionBuilder,
+  identity: Identity
+): void {
+  const text = identityMemoText(identity);
+  if (text) builder.addMemo(StellarSdk.Memo.text(text));
+}
+
 export interface PaymentRequest {
   network: NetworkId;
   source: string;
   destination: string;
   amount: string;
   asset: StellarSdk.Asset;
+  /** Read from the form and discarded. The memo carries `identity` instead. */
   memo?: string;
+  identity: Identity;
 }
 
 /**
@@ -92,7 +108,7 @@ export interface PaymentRequest {
 export async function buildPaymentTx(
   request: PaymentRequest
 ): Promise<StellarSdk.Transaction> {
-  const { network, source, destination, amount, asset, memo } = request;
+  const { network, source, destination, amount, asset, identity } = request;
 
   if (!StellarSdk.StrKey.isValidEd25519PublicKey(destination)) {
     throw new Error("Destination is not a valid Stellar address.");
@@ -125,9 +141,7 @@ export async function buildPaymentTx(
       : StellarSdk.Operation.payment({ destination, asset, amount })
   );
 
-  if (memo?.trim()) {
-    builder.addMemo(StellarSdk.Memo.text(memo.trim()));
-  }
+  addIdentityMemo(builder, identity);
 
   return builder.setTimeout(TX_TIMEOUT).build();
 }
@@ -138,22 +152,24 @@ export interface TrustlineRequest {
   asset: StellarSdk.Asset;
   /** Omit for the maximum limit; "0" removes the trustline. */
   limit?: string;
+  identity: Identity;
 }
 
 export async function buildTrustlineTx(
   request: TrustlineRequest
 ): Promise<StellarSdk.Transaction> {
-  const { network, source, asset, limit } = request;
+  const { network, source, asset, limit, identity } = request;
   const config = getNetworkConfig(network);
   const account = await getHorizon(network).loadAccount(source);
 
-  return new StellarSdk.TransactionBuilder(account, {
+  const builder = new StellarSdk.TransactionBuilder(account, {
     fee: StellarSdk.BASE_FEE,
     networkPassphrase: config.networkPassphrase,
-  })
-    .addOperation(StellarSdk.Operation.changeTrust({ asset, limit }))
-    .setTimeout(TX_TIMEOUT)
-    .build();
+  }).addOperation(StellarSdk.Operation.changeTrust({ asset, limit }));
+
+  addIdentityMemo(builder, identity);
+
+  return builder.setTimeout(TX_TIMEOUT).build();
 }
 
 export function signTx(

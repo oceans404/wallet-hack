@@ -7,6 +7,7 @@ import {
   openVaultKey,
   type EncryptedBlob,
 } from "./crypto";
+import { EMPTY_IDENTITY, hasIdentity, type Identity } from "./identity";
 
 const VAULT_STORAGE_KEY = "wallet-hack:vault";
 
@@ -20,6 +21,8 @@ export interface StoredAccount {
 
 interface VaultData {
   accounts: StoredAccount[];
+  /** Collected at onboarding, encrypted in the same blob as the secret keys. */
+  identity: Identity;
 }
 
 /**
@@ -31,6 +34,7 @@ export interface VaultSession {
   salt: Uint8Array;
   iterations: number;
   accounts: StoredAccount[];
+  identity: Identity;
 }
 
 export function vaultExists(): boolean {
@@ -50,16 +54,26 @@ function readBlob(): EncryptedBlob | null {
 async function persist(session: VaultSession): Promise<void> {
   const blob = await encryptJson(session.key, session.salt, session.iterations, {
     accounts: session.accounts,
+    identity: session.identity,
   } satisfies VaultData);
   localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(blob));
 }
 
-export async function createVault(password: string): Promise<VaultSession> {
+export async function createVault(
+  password: string,
+  identity: Identity
+): Promise<VaultSession> {
   if (vaultExists()) {
     throw new Error("A vault already exists in this browser.");
   }
   const { key, salt, iterations } = await createVaultKey(password);
-  const session: VaultSession = { key, salt, iterations, accounts: [] };
+  const session: VaultSession = {
+    key,
+    salt,
+    iterations,
+    accounts: [],
+    identity,
+  };
   await persist(session);
   return session;
 }
@@ -82,6 +96,8 @@ export async function unlockVault(password: string): Promise<VaultSession> {
     salt: fromBase64(blob.salt),
     iterations: blob.iterations,
     accounts: data.accounts ?? [],
+    // Vaults created before onboarding collected personal details have none.
+    identity: data.identity ?? EMPTY_IDENTITY,
   };
 }
 
@@ -92,6 +108,36 @@ export function destroyVault(): void {
 
 function nextName(accounts: StoredAccount[]): string {
   return `Account ${accounts.length + 1}`;
+}
+
+export const IDENTITY_REQUIRED_MESSAGE =
+  "Verify your identity before adding an account.";
+
+/**
+ * Enforced on every path that adds an account, so a complete identity is a
+ * precondition for the vault holding any keys at all.
+ */
+function requireIdentity(session: VaultSession): void {
+  if (!hasIdentity(session.identity)) {
+    throw new Error(IDENTITY_REQUIRED_MESSAGE);
+  }
+}
+
+/** Replaces the stored identity. Rejects a partial one. */
+export async function saveIdentity(
+  session: VaultSession,
+  identity: Identity
+): Promise<VaultSession> {
+  if (!identity.firstName.trim() || !identity.lastName.trim()) {
+    throw new Error("First and last name are required.");
+  }
+  if (!identity.phone.trim()) {
+    throw new Error("Phone number is required.");
+  }
+
+  const next: VaultSession = { ...session, identity };
+  await persist(next);
+  return next;
 }
 
 async function withAccounts(
@@ -107,6 +153,8 @@ export async function generateAccount(
   session: VaultSession,
   name?: string
 ): Promise<{ session: VaultSession; account: StoredAccount }> {
+  requireIdentity(session);
+
   const keypair = Keypair.random();
   const account: StoredAccount = {
     id: crypto.randomUUID(),
@@ -125,6 +173,8 @@ export async function importSecret(
   secret: string,
   name?: string
 ): Promise<{ session: VaultSession; account: StoredAccount }> {
+  requireIdentity(session);
+
   const trimmed = secret.trim();
   if (!StrKey.isValidEd25519SecretSeed(trimmed)) {
     throw new Error("That is not a valid Stellar secret key (starts with S).");
@@ -167,6 +217,8 @@ export async function importWatchAddress(
   publicKey: string,
   name?: string
 ): Promise<{ session: VaultSession; account: StoredAccount }> {
+  requireIdentity(session);
+
   const trimmed = publicKey.trim();
   if (!StrKey.isValidEd25519PublicKey(trimmed)) {
     throw new Error("That is not a valid Stellar address (starts with G).");

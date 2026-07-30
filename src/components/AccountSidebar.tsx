@@ -1,8 +1,93 @@
 import { useState } from "react";
 import { useWallet } from "../context/WalletContext";
 import { errorMessage, shortenAddress } from "../lib/format";
+import { hasIdentity } from "../lib/identity";
 
 type AddMode = "generate" | "secret" | "watch";
+
+/**
+ * Shown instead of the add-account form when the vault has no identity on it.
+ * Only reachable by vaults created before onboarding collected these details;
+ * new wallets supply them at creation.
+ */
+function IdentityGate() {
+  const { setIdentity } = useWallet();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const complete =
+    Boolean(firstName.trim()) && Boolean(lastName.trim()) && Boolean(phone.trim());
+
+  const handleSave = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      await setIdentity({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
+      });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="add-panel">
+      <h2>Verify your identity</h2>
+      <p className="muted small">
+        Required before this wallet can hold an account.
+      </p>
+
+      <label className="field">
+        <span>First name</span>
+        <input
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          placeholder="Ada"
+          autoComplete="given-name"
+        />
+      </label>
+
+      <label className="field">
+        <span>Last name</span>
+        <input
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          placeholder="Lovelace"
+          autoComplete="family-name"
+        />
+      </label>
+
+      <label className="field">
+        <span>Phone number</span>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+1 555 123 4567"
+          autoComplete="tel"
+        />
+      </label>
+
+      {error && <p className="alert alert-error">{error}</p>}
+
+      <button
+        className="btn btn-primary"
+        type="button"
+        onClick={handleSave}
+        disabled={busy || !complete}
+      >
+        {busy ? "Saving…" : "Verify"}
+      </button>
+    </div>
+  );
+}
 
 /**
  * Account list plus the "add account" panel. The wallet holds any number of
@@ -17,7 +102,10 @@ export function AccountSidebar() {
     addImportedSecret,
     addWatchAddress,
     remove,
+    identity,
   } = useWallet();
+
+  const identityVerified = hasIdentity(identity);
 
   const [adding, setAdding] = useState(false);
   const [mode, setMode] = useState<AddMode>("generate");
@@ -104,7 +192,9 @@ export function AccountSidebar() {
         })}
       </div>
 
-      {adding ? (
+      {!identityVerified ? (
+        <IdentityGate />
+      ) : adding ? (
         <div className="add-panel">
           <div className="tabs small-tabs">
             <button
